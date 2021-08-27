@@ -18,9 +18,16 @@ app.get("/", (req, res) => {
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
+
 //HTML presented in the browser
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
+});
+
+//pass the URL data to our template.
+app.get("/urls", (req, res) => {
+  const templateVars = {urls: urlDatabase};
+  res.render("urls_index", templateVars);
 });
 
 app.listen(PORT, () => {
