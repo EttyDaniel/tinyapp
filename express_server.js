@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
+const { query } = require("express");
 app.use(bodyParser.urlencoded({extended: true}));
 
 //This tells the Express app to use EJS as its templating engine
@@ -36,10 +37,15 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+app.post("/urls/:id/update", (req, res) => {
+  urlDatabase[req.params.id] = req.body.updatedLongURL;
+  res.redirect("/urls");
+});
+
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
-  res.redirect("/urls")
+  res.redirect("/urls");
 });
 
 app.get("/urls/:shortURL", (req,res) => {
