@@ -11,9 +11,30 @@ app.set("view engine", "ejs");
 
 app.use(cookieParser())
 
+const generateRandomString = function() {
+  // Generate a random number, convert it to a string using
+  // a radix of 36 (which will include all alph-numericals)
+  // then cut a 6 char substring.
+  return Math.random().toString(36).substr(2, 6)
+};
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
+};
+
+//The tinyApp Users
+let users = {
+  "aa1" : {
+    id: "aa1",
+    email: "yaya@gmail.com",
+    password: "Kal888"
+  },
+  "aa2" : {
+    id: "aa2",
+    email: "lilcat@yahoo.com",
+    password: "cat@cat"
+  }
 };
 
 //Homepage
@@ -30,16 +51,25 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
+app.get("/register", (req,res) => {
+  const user_id = req.cookies['user_id'];
+  const user = users[user_id];
+  templateVars = {user};
+  res.render("register", templateVars);
+});
+
 //pass the URL data to our template.
 app.get("/urls", (req, res) => {
-  const username = req.cookies['user'];
-  const templateVars = {urls: urlDatabase, username};
+  const userId = req.cookies['user_id'];
+  const user = users[userId];
+  const templateVars = {urls: urlDatabase, user};
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const username = req.cookies['user'];
-  const templateVars = {username};
+  const userId = req.cookies['user_id'];
+  const user = users[userId];
+  const templateVars = {user};
   res.render("urls_new", templateVars);
 });
 
@@ -55,8 +85,9 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req,res) => {
-  const username = req.cookies['user'];
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username};
+  const userId = req.cookies['user_id'];
+  const user = users[userId];
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user};
   res.render("urls_show", templateVars);
 });
 
@@ -83,23 +114,49 @@ to the value submitted in the request body via the login form
 and then redirect back to /urls page
 */
 app.post("/login", (req,res) => {
+  
   const username = req.body.username;
-  res.cookie("user", username);
+  let user_id = null;
+  for(let id in users) {
+    if(users[id].email === username) {
+      user_id = id;
+    }
+  }
+  res.cookie("user_id", user_id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req,res) => {
   //console.log(req.body.username);
-  res.clearCookie("user");
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
-function generateRandomString() {
-  // Generate a random number, convert it to a string using
-  // a radix of 36 (which will include all alph-numericals)
-  // then cut a 6 char substring.
-  return Math.random().toString(36).substr(2, 6)
-}
+//registering a new user to tinyApp
+app.post("/register", (req,res) => {
+
+  let newUser = {};
+  const email = req.body.email;
+  const password = req.body.psw;
+  const id = generateRandomString();
+  newUser = {
+    "id": id,
+    "email": email,
+    "password": password
+  };
+  users[id] = newUser;
+  
+  res.cookie("user_id", id);
+  res.redirect("/urls");
+});
+
+
+// function generateRandomString() {
+//   // Generate a random number, convert it to a string using
+//   // a radix of 36 (which will include all alph-numericals)
+//   // then cut a 6 char substring.
+//   return Math.random().toString(36).substr(2, 6)
+// };
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
