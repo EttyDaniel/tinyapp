@@ -18,6 +18,17 @@ const generateRandomString = function() {
   return Math.random().toString(36).substr(2, 6)
 };
 
+const emailExists = function(emailFromUser) {
+  
+  for (let id in users) {
+    if(users[id].email === emailFromUser) {
+      console.log("email exists");
+      return true;
+    }
+  }
+  return false;
+};
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -138,25 +149,26 @@ app.post("/register", (req,res) => {
   let newUser = {};
   const email = req.body.email;
   const password = req.body.psw;
-  const id = generateRandomString();
-  newUser = {
-    "id": id,
-    "email": email,
-    "password": password
-  };
-  users[id] = newUser;
-  
-  res.cookie("user_id", id);
+  if (email ==="" || password === "" || emailExists(email)) {
+    console.log("hi");
+    res.status(400);
+    res.send("Email already exists");
+  } else {
+    const id = generateRandomString();
+    newUser = {
+      "id": id,
+      "email": email,
+      "password": password
+    };
+    users[id] = newUser;
+    console.log(users[id]);
+
+    res.cookie("user_id", id);
+  }
+  //res.cookie("user_id", id);
   res.redirect("/urls");
 });
 
-
-// function generateRandomString() {
-//   // Generate a random number, convert it to a string using
-//   // a radix of 36 (which will include all alph-numericals)
-//   // then cut a 6 char substring.
-//   return Math.random().toString(36).substr(2, 6)
-// };
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
