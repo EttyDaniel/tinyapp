@@ -107,10 +107,17 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
+  
   const userId = req.cookies['user_id'];
-  const user = users[userId];
-  const templateVars = {user};
-  res.render("urls_new", templateVars);
+  if (userId) {
+    const user = users[userId];
+    const templateVars = {user};
+    res.render("urls_new", templateVars);
+  } else {
+    res.redirect("/login");
+  }
+
+  
 });
 
 app.post("/urls/:id/update", (req, res) => {
@@ -137,7 +144,7 @@ app.get("/u/:shortURL", (req,res) => {
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
+  //console.log(req.body);  // Log the POST request body to the console
 
   // Generate a random 6 char string
   const shortURL = generateRandomString();
