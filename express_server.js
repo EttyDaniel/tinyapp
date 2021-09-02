@@ -46,13 +46,13 @@ const findUser = function(emailFromUser) {
 };
 
 /*----------------------------------------------------------
-        GLOBAL FUNCTIONS
+        GLOBAL Application Data
 */
 //----------------------------------------------------------
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userId: "aa1"},
+  "9sm5xK": {longURL: "http://www.google.com", userId: "aa2"}
 };
 
 //The tinyApp Users
@@ -121,7 +121,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  urlDatabase[req.params.id] = req.body.updatedLongURL;
+  urlDatabase[req.params.id].longURL = req.body.updatedLongURL;//*
   res.redirect("/urls");
 });
 
@@ -139,7 +139,7 @@ app.get("/urls/:shortURL", (req,res) => {
 });
 
 app.get("/u/:shortURL", (req,res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;//*
   res.redirect(longURL);
 });
 
@@ -150,7 +150,7 @@ app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
 
   // Save generated shortURL into our DB
-  urlDatabase[shortURL] = req.body.longURL;
+  urlDatabase[shortURL].longURL = req.body.longURL;//*
 
   // Redirect the browser to the shortURL
   res.redirect(`/urls/${shortURL}`);
