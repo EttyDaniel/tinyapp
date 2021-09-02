@@ -11,6 +11,13 @@ app.set("view engine", "ejs");
 
 app.use(cookieParser())
 
+//-------------------------------------------------------
+/*
+      ASSISTING FUNCTIONS
+*/
+//-------------------------------------------------------
+
+
 const generateRandomString = function() {
   // Generate a random number, convert it to a string using
   // a radix of 36 (which will include all alph-numericals)
@@ -19,7 +26,6 @@ const generateRandomString = function() {
 };
 
 const emailExists = function(emailFromUser) {
-  
   for (let id in users) {
     if(users[id].email === emailFromUser) {
       console.log("email exists");
@@ -28,6 +34,21 @@ const emailExists = function(emailFromUser) {
   }
   return false;
 };
+
+const findUser = function(emailFromUser) {
+  for (let id in users) {
+    if(users[id].email === emailFromUser) {
+      return id;
+    }
+  }
+  //email was not found
+  return "";
+};
+
+/*----------------------------------------------------------
+        GLOBAL FUNCTIONS
+*/
+//----------------------------------------------------------
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -47,6 +68,7 @@ let users = {
     password: "cat@cat"
   }
 };
+//----------------------------------------------------------
 
 //Homepage
 app.get("/", (req, res) => {
@@ -67,6 +89,13 @@ app.get("/register", (req,res) => {
   const user = users[user_id];
   templateVars = {user};
   res.render("register", templateVars);
+});
+
+app.get("/login", (req,res) => {
+  const user_id = req.cookies['user_id'];
+  const user = users[user_id];
+  templateVars = {user};
+  res.render("login", templateVars);
 });
 
 //pass the URL data to our template.
@@ -120,25 +149,26 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
-/*The Login route - It should set a cookie named username 
-to the value submitted in the request body via the login form
-and then redirect back to /urls page
+/*The Login route - it uses the new email and password fields,
+ and sets an appropriate user_id cookie on successful login
 */
 app.post("/login", (req,res) => {
   
-  const username = req.body.username;
-  let user_id = null;
-  for(let id in users) {
-    if(users[id].email === username) {
-      user_id = id;
-    }
+  const emailFromUser = req.body.email;
+  let id = findUser(emailFromUser);
+  if (!id) {
+    res.status(403);
+    res.send("Email doesn't exists");
+  } else if (!(users[id].password === req.body.psw)) {
+    res.status(403);
+    res.send("Password is incorrect");
   }
-  res.cookie("user_id", user_id);
+
+  res.cookie("user_id",id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req,res) => {
-  //console.log(req.body.username);
   res.clearCookie("user_id");
   res.redirect("/urls");
 });
@@ -150,7 +180,6 @@ app.post("/register", (req,res) => {
   const email = req.body.email;
   const password = req.body.psw;
   if (email ==="" || password === "" || emailExists(email)) {
-    console.log("hi");
     res.status(400);
     res.send("Email already exists");
   } else {
@@ -161,7 +190,6 @@ app.post("/register", (req,res) => {
       "password": password
     };
     users[id] = newUser;
-    console.log(users[id]);
 
     res.cookie("user_id", id);
   }
