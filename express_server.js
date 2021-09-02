@@ -103,6 +103,7 @@ app.get("/urls", (req, res) => {
   const userId = req.cookies['user_id'];
   const user = users[userId];
   const templateVars = {urls: urlDatabase, user};
+  console.log(templateVars);
   res.render("urls_index", templateVars);
 });
 
@@ -134,7 +135,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.get("/urls/:shortURL", (req,res) => {
   const userId = req.cookies['user_id'];
   const user = users[userId];
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user};
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user};
   res.render("urls_show", templateVars);
 });
 
