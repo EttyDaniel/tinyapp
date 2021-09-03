@@ -45,11 +45,28 @@ const findUser = function(emailFromUser) {
   return "";
 };
 
+const isURLOwnedByUser = function(url, userId) {
+  return urlDatabase[url].userId === userId;
+};
+
+
+const urlsForUser = function (id) {
+  const urls = {};
+  for (shortURL in urlDatabase ) {
+    if (urlDatabase[shortURL].userId === id) {
+      const long = urlDatabase[shortURL].longURL;
+      urls[shortURL] =  {longURL: long, userId: id};
+    }
+  }
+  return urls;
+};
+
 /*----------------------------------------------------------
         GLOBAL Application Data
 */
 //----------------------------------------------------------
 
+let templateVars = {};
 const urlDatabase = {
   "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userId: "aa1"},
   "9sm5xK": {longURL: "http://www.google.com", userId: "aa2"}
@@ -102,9 +119,18 @@ app.get("/login", (req,res) => {
 app.get("/urls", (req, res) => {
   const userId = req.cookies['user_id'];
   const user = users[userId];
-  const templateVars = {urls: urlDatabase, user};
-  console.log(templateVars);
-  res.render("urls_index", templateVars);
+  console.log(user);
+  if (user) {
+    const urls = urlsForUser(userId);
+    console.log(urls);
+    templateVars = {urls, user};
+    //templateVars = {urls: urlDatabase, user};
+    res.render("urls_index", templateVars);
+  } else {
+    res.status(402).send("Please Login or Register first");
+  }
+  // templateVars = {urls: urlDatabase, user};
+  // res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
@@ -112,7 +138,7 @@ app.get("/urls/new", (req, res) => {
   const userId = req.cookies['user_id'];
   if (userId) {
     const user = users[userId];
-    const templateVars = {user};
+    templateVars = {user};
     res.render("urls_new", templateVars);
   } else {
     res.redirect("/login");
@@ -122,21 +148,38 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  urlDatabase[req.params.id].longURL = req.body.updatedLongURL;//*
-  res.redirect("/urls");
+  if (isURLOwnedByUser(req.params.id, req.cookies['user_id'])) {
+    urlDatabase[req.params.id].longURL = req.body.updatedLongURL;
+    res.redirect("/urls");
+  } else {
+    res.send("User does not have proper permission to update this URL")
+  }
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL];
-  res.redirect("/urls");
+  if (isURLOwnedByUser(req.params.shortURL, req.cookies['user_id'])) {
+    const shortURL = req.params.shortURL;
+    delete urlDatabase[shortURL];
+    res.redirect("/urls");
+  } else {
+    res.send("User does not have proper permission to delete this URL")
+  }
 });
 
 app.get("/urls/:shortURL", (req,res) => {
   const userId = req.cookies['user_id'];
   const user = users[userId];
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user};
-  res.render("urls_show", templateVars);
+
+  // Check for an edge case where the URL is not in the system
+  if (urlDatabase[req.params.shortURL] === undefined) {
+    res.send("The provided URL does not exist in the system");
+    // Only display the shortend URL page for the user who owns it
+  } else if (isURLOwnedByUser(req.params.shortURL, userId)) {
+    templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user};
+    res.render("urls_show", templateVars);
+  } else {
+    res.send("Access Denied, URL does not belong to the current user");
+  }
 });
 
 app.get("/u/:shortURL", (req,res) => {
@@ -151,7 +194,7 @@ app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
 
   // Save generated shortURL into our DB
-  urlDatabase[shortURL].longURL = req.body.longURL;//*
+  urlDatabase[shortURL] = {longURL:req.body.longURL, userId:req.cookies['user_id']};
 
   // Redirect the browser to the shortURL
   res.redirect(`/urls/${shortURL}`);
