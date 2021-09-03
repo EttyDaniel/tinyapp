@@ -6,11 +6,17 @@ const { query } = require("express");
 app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
+const cookieSession = require('cookie-session')
 
 //This tells the Express app to use EJS as its templating engine
 app.set("view engine", "ejs");
 
 app.use(cookieParser())
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2']
+}));
 
 //-------------------------------------------------------
 /*
@@ -103,14 +109,14 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/register", (req,res) => {
-  const user_id = req.cookies['user_id'];
+  const user_id = req.session.user_id;
   const user = users[user_id];
   templateVars = {user};
   res.render("register", templateVars);
 });
 
 app.get("/login", (req,res) => {
-  const user_id = req.cookies['user_id'];
+  const user_id = req.session.user_id;
   const user = users[user_id];
   templateVars = {user};
   res.render("login", templateVars);
@@ -118,25 +124,20 @@ app.get("/login", (req,res) => {
 
 //pass the URL data to our template.
 app.get("/urls", (req, res) => {
-  const userId = req.cookies['user_id'];
+  const userId = req.session.user_id;
   const user = users[userId];
-  console.log(user);
   if (user) {
     const urls = urlsForUser(userId);
-    console.log(urls);
     templateVars = {urls, user};
-    //templateVars = {urls: urlDatabase, user};
     res.render("urls_index", templateVars);
   } else {
     res.status(402).send("Please Login or Register first");
   }
-  // templateVars = {urls: urlDatabase, user};
-  // res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
   
-  const userId = req.cookies['user_id'];
+  const userId = req.session.user_id;
   if (userId) {
     const user = users[userId];
     templateVars = {user};
@@ -149,7 +150,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  if (isURLOwnedByUser(req.params.id, req.cookies['user_id'])) {
+  if (isURLOwnedByUser(req.params.id, req.session.user_id)) {
     urlDatabase[req.params.id].longURL = req.body.updatedLongURL;
     res.redirect("/urls");
   } else {
@@ -158,7 +159,7 @@ app.post("/urls/:id/update", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  if (isURLOwnedByUser(req.params.shortURL, req.cookies['user_id'])) {
+  if (isURLOwnedByUser(req.params.shortURL, req.session.user_id)) {
     const shortURL = req.params.shortURL;
     delete urlDatabase[shortURL];
     res.redirect("/urls");
@@ -168,7 +169,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req,res) => {
-  const userId = req.cookies['user_id'];
+  const userId = req.session.user_id;
   const user = users[userId];
 
   // Check for an edge case where the URL is not in the system
@@ -189,13 +190,12 @@ app.get("/u/:shortURL", (req,res) => {
 });
 
 app.post("/urls", (req, res) => {
-  //console.log(req.body);  // Log the POST request body to the console
 
   // Generate a random 6 char string
   const shortURL = generateRandomString();
 
   // Save generated shortURL into our DB
-  urlDatabase[shortURL] = {longURL:req.body.longURL, userId:req.cookies['user_id']};
+  urlDatabase[shortURL] = {longURL:req.body.longURL, userId:req.session.user_id};
 
   // Redirect the browser to the shortURL
   res.redirect(`/urls/${shortURL}`);
@@ -215,19 +215,17 @@ app.post("/login", (req,res) => {
     res.status(403);
     res.send("Password is incorrect");
   }
-
-  res.cookie("user_id",id);
+  req.session.user_id = id;
   res.redirect("/urls");
 });
 
 app.post("/logout", (req,res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/urls");
 });
 
 //registering a new user to tinyApp
 app.post("/register", (req,res) => {
-
   let newUser = {};
   const email = req.body.email;
   const password = req.body.psw;
@@ -242,10 +240,8 @@ app.post("/register", (req,res) => {
       "password": bcrypt.hashSync(password, 10)
     };
     users[id] = newUser;
-
-    res.cookie("user_id", id);
+    req.session.user_id = id;
   }
-  //res.cookie("user_id", id);
   res.redirect("/urls");
 });
 
