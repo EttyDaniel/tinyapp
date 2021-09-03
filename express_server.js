@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 const { query } = require("express");
 app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
 
 //This tells the Express app to use EJS as its templating engine
 app.set("view engine", "ejs");
@@ -77,12 +78,12 @@ let users = {
   "aa1" : {
     id: "aa1",
     email: "yaya@gmail.com",
-    password: "Kal888"
+    password: "$2b$10$2uJXf7z0pdTLedx1Dudv4ump/ctwspwqiUmeNKDV/O9IDKzHs2sMm" //Kal888
   },
   "aa2" : {
     id: "aa2",
     email: "lilcat@yahoo.com",
-    password: "cat@cat"
+    password: "$2b$10$0lU03rBdZiRUfhVbx35Bs.g9W9P2qSrd6wQGJrMP2t.02n/6M42o2" //cat@cat
   }
 };
 //----------------------------------------------------------
@@ -210,7 +211,7 @@ app.post("/login", (req,res) => {
   if (!id) {
     res.status(403);
     res.send("Email doesn't exists");
-  } else if (!(users[id].password === req.body.psw)) {
+  } else if (!(bcrypt.compareSync(req.body.psw, users[id].password))) {
     res.status(403);
     res.send("Password is incorrect");
   }
@@ -238,7 +239,7 @@ app.post("/register", (req,res) => {
     newUser = {
       "id": id,
       "email": email,
-      "password": password
+      "password": bcrypt.hashSync(password, 10)
     };
     users[id] = newUser;
 
