@@ -4,58 +4,17 @@ const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 const { query } = require("express");
 app.use(bodyParser.urlencoded({extended: true}));
-const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
-const cookieSession = require('cookie-session')
-const getUserByEmail = require("./helpers");
+const cookieSession = require('cookie-session');
+const {getUserByEmail, generateRandomString, urlsForUser, emailExists, isURLOwnedByUser} = require("./helpers");
+
 //This tells the Express app to use EJS as its templating engine
 app.set("view engine", "ejs");
-
-app.use(cookieParser())
 
 app.use(cookieSession({
   name: 'session',
   keys: ['key1', 'key2']
 }));
-
-//-------------------------------------------------------
-/*
-      ASSISTING FUNCTIONS - helper functions
-*/
-//-------------------------------------------------------
-
-const generateRandomString = function() {
-  // Generate a random number, convert it to a string using
-  // a radix of 36 (which will include all alph-numericals)
-  // then cut a 6 char substring.
-  return Math.random().toString(36).substr(2, 6)
-};
-
-const emailExists = function(emailFromUser) {
-  for (let id in users) {
-    if(users[id].email === emailFromUser) {
-      return true;
-    }
-  }
-  return false;
-};
-
-
-
-const isURLOwnedByUser = function(url, userId) {
-  return urlDatabase[url].userId === userId;
-};
-
-const urlsForUser = function (id) {
-  const urls = {};
-  for (shortURL in urlDatabase ) {
-    if (urlDatabase[shortURL].userId === id) {
-      const long = urlDatabase[shortURL].longURL;
-      urls[shortURL] =  {longURL: long, userId: id};
-    }
-  }
-  return urls;
-};
 
 /*----------------------------------------------------------
         GLOBAL Application Data
@@ -63,6 +22,8 @@ const urlsForUser = function (id) {
 //----------------------------------------------------------
 
 let templateVars = {};
+
+//Our database
 const urlDatabase = {
   "b2xVn2": {longURL: "http://www.lighthouselabs.ca", userId: "aa1"},
   "9sm5xK": {longURL: "http://www.google.com", userId: "aa2"}
@@ -82,7 +43,6 @@ let users = {
   }
 };
 //----------------------------------------------------------
-
 //Homepage
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -99,16 +59,16 @@ app.get("/hello", (req, res) => {
 
 //a new registration
 app.get("/register", (req,res) => {
-  const user_id = req.session.user_id;
-  const user = users[user_id];
+  const userId = req.session.user_id;
+  const user = users[userId];
   templateVars = {user};
   res.render("register", templateVars);
 });
 
 //a new login
 app.get("/login", (req,res) => {
-  const user_id = req.session.user_id;
-  const user = users[user_id];
+  const userId = req.session.user_id;
+  const user = users[userId];
   templateVars = {user};
   res.render("login", templateVars);
 });
@@ -119,7 +79,7 @@ app.get("/urls", (req, res) => {
   const user = users[userId];
   let urls = {};
   if (user) {
-    urls = urlsForUser(userId);
+    urls = urlsForUser(userId, urlDatabase);
     templateVars = {urls, user};
     res.render("urls_index", templateVars);
   } else {
@@ -144,21 +104,21 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  if (isURLOwnedByUser(req.params.id, req.session.user_id)) {
+  if (isURLOwnedByUser(req.params.id, req.session.user_id, urlDatabase)) {
     urlDatabase[req.params.id].longURL = req.body.updatedLongURL;
     res.redirect("/urls");
   } else {
-    res.send("User does not have proper permission to update this URL")
+    res.send("User does not have proper permission to update this URL");
   }
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  if (isURLOwnedByUser(req.params.shortURL, req.session.user_id)) {
+  if (isURLOwnedByUser(req.params.shortURL, req.session.user_id, urlDatabase)) {
     const shortURL = req.params.shortURL;
     delete urlDatabase[shortURL];
     res.redirect("/urls");
   } else {
-    res.send("User does not have proper permission to delete this URL")
+    res.send("User does not have proper permission to delete this URL");
   }
 });
 
@@ -169,7 +129,7 @@ app.get("/urls/:shortURL", (req,res) => {
   if (urlDatabase[req.params.shortURL] === undefined) {
     res.send("The provided URL does not exist in the system");
     // Only display the shortend URL page for the user who owns it
-  } else if (isURLOwnedByUser(req.params.shortURL, userId)) {
+  } else if (isURLOwnedByUser(req.params.shortURL, userId, urlDatabase)) {
     templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user};
     res.render("urls_show", templateVars);
   } else {
@@ -198,8 +158,7 @@ app.post("/login", (req,res) => {
   
   const emailFromUser = req.body.email;
   const currentUser = getUserByEmail(emailFromUser, users);
-  //let id = getUserByEmail(emailFromUser);
-  //User dosen't exists in our users DB 
+  //User dosen't exists in our users DB
   if (!currentUser) {
     res.status(403);
     res.send("Email doesn't exists");
@@ -221,7 +180,7 @@ app.post("/register", (req,res) => {
   let newUser = {};
   const email = req.body.email;
   const password = req.body.psw;
-  if (email ==="" || password === "" || emailExists(email)) {
+  if (email === "" || password === "" || emailExists(email, users)) {
     res.status(400);
     res.send("Email already exists");
   } else {
