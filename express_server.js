@@ -7,7 +7,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session')
-
+const getUserByEmail = require("./helpers");
 //This tells the Express app to use EJS as its templating engine
 app.set("view engine", "ejs");
 
@@ -20,10 +20,9 @@ app.use(cookieSession({
 
 //-------------------------------------------------------
 /*
-      ASSISTING FUNCTIONS
+      ASSISTING FUNCTIONS - helper functions
 */
 //-------------------------------------------------------
-
 
 const generateRandomString = function() {
   // Generate a random number, convert it to a string using
@@ -35,27 +34,17 @@ const generateRandomString = function() {
 const emailExists = function(emailFromUser) {
   for (let id in users) {
     if(users[id].email === emailFromUser) {
-      console.log("email exists");
       return true;
     }
   }
   return false;
 };
 
-const findUser = function(emailFromUser) {
-  for (let id in users) {
-    if(users[id].email === emailFromUser) {
-      return id;
-    }
-  }
-  //email was not found
-  return "";
-};
+
 
 const isURLOwnedByUser = function(url, userId) {
   return urlDatabase[url].userId === userId;
 };
-
 
 const urlsForUser = function (id) {
   const urls = {};
@@ -108,6 +97,7 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
+//a new registration
 app.get("/register", (req,res) => {
   const user_id = req.session.user_id;
   const user = users[user_id];
@@ -115,6 +105,7 @@ app.get("/register", (req,res) => {
   res.render("register", templateVars);
 });
 
+//a new login
 app.get("/login", (req,res) => {
   const user_id = req.session.user_id;
   const user = users[user_id];
@@ -126,12 +117,15 @@ app.get("/login", (req,res) => {
 app.get("/urls", (req, res) => {
   const userId = req.session.user_id;
   const user = users[userId];
+  let urls = {};
   if (user) {
-    const urls = urlsForUser(userId);
+    urls = urlsForUser(userId);
     templateVars = {urls, user};
     res.render("urls_index", templateVars);
   } else {
-    res.status(402).send("Please Login or Register first");
+    res.status(402);
+    res.render("loginRegister", {urls, user});
+    //res.status(402).send("Please Login or Register first");
   }
 });
 
@@ -171,7 +165,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.get("/urls/:shortURL", (req,res) => {
   const userId = req.session.user_id;
   const user = users[userId];
-
   // Check for an edge case where the URL is not in the system
   if (urlDatabase[req.params.shortURL] === undefined) {
     res.send("The provided URL does not exist in the system");
@@ -190,13 +183,10 @@ app.get("/u/:shortURL", (req,res) => {
 });
 
 app.post("/urls", (req, res) => {
-
   // Generate a random 6 char string
   const shortURL = generateRandomString();
-
   // Save generated shortURL into our DB
   urlDatabase[shortURL] = {longURL:req.body.longURL, userId:req.session.user_id};
-
   // Redirect the browser to the shortURL
   res.redirect(`/urls/${shortURL}`);
 });
@@ -207,15 +197,17 @@ app.post("/urls", (req, res) => {
 app.post("/login", (req,res) => {
   
   const emailFromUser = req.body.email;
-  let id = findUser(emailFromUser);
-  if (!id) {
+  const currentUser = getUserByEmail(emailFromUser, users);
+  //let id = getUserByEmail(emailFromUser);
+  //User dosen't exists in our users DB 
+  if (!currentUser) {
     res.status(403);
     res.send("Email doesn't exists");
-  } else if (!(bcrypt.compareSync(req.body.psw, users[id].password))) {
+  } else if (!(bcrypt.compareSync(req.body.psw, currentUser.password))) {
     res.status(403);
     res.send("Password is incorrect");
   }
-  req.session.user_id = id;
+  req.session.user_id = currentUser.id;
   res.redirect("/urls");
 });
 
@@ -244,7 +236,6 @@ app.post("/register", (req,res) => {
   }
   res.redirect("/urls");
 });
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
