@@ -5,8 +5,9 @@ In order to view, update and add URLs the user must Login or register first. Aft
 
 ## Final Product
 
-!["screenshot description"](#)
-!["screenshot description"](#)
+!["Screenshot of the urls screen for a non user"](https://github.com/EttyDaniel/tinyapp/blob/b4424ad533a0482fabaaf4def6c917e6d9c4efd4/docs/urlsMain.png)
+!["Screenshot of the urls screen for a signed in user and his urls"](https://github.com/EttyDaniel/tinyapp/blob/b4424ad533a0482fabaaf4def6c917e6d9c4efd4/docs/urlsMainForUser.png)
+!["Screenshot of the new url just added by the user"](https://github.com/EttyDaniel/tinyapp/blob/b4424ad533a0482fabaaf4def6c917e6d9c4efd4/docs/newUrlAdded.png)
 
 ## Dependencies
 
@@ -21,3 +22,4 @@ In order to view, update and add URLs the user must Login or register first. Aft
 
 - Install all dependencies (using the `npm install` command).
 - Run the development web server using the `node express_server.js` command.
+- Remember that in order to view, add and edit urls you will have to login or register first.
