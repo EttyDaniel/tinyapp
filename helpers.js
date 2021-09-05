@@ -1,4 +1,4 @@
-//gets the email from the user in returns user object if found
+//gets the email from the user and returns the user object if found
 const getUserByEmail = function(emailFromUser, users) {
   for (let id in users) {
     if(users[id].email === emailFromUser) {
@@ -9,13 +9,14 @@ const getUserByEmail = function(emailFromUser, users) {
   return "";
 };
 
+// Generate a random number, convert it to a string using
+// a radix of 36 (which will include all alph-numericals)
+// then cut a 6 char substring.
 const generateRandomString = function() {
-  // Generate a random number, convert it to a string using
-  // a radix of 36 (which will include all alph-numericals)
-  // then cut a 6 char substring.
-  return Math.random().toString(36).substr(2, 6)
+  return Math.random().toString(36).substr(2, 6);
 };
 
+//gets the user ID and returns a list of all of the URLs associated with it
 const urlsForUser = function (id, urlDatabase) {
   const urls = {};
   for (shortURL in urlDatabase ) {
@@ -27,6 +28,7 @@ const urlsForUser = function (id, urlDatabase) {
   return urls;
 };
 
+// Checks if the email exists in the system and returns a boolean response
 const emailExists = function(emailFromUser, users) {
   for (let id in users) {
     if(users[id].email === emailFromUser) {
@@ -36,8 +38,14 @@ const emailExists = function(emailFromUser, users) {
   return false;
 };
 
+// Check if the URL is owned by the user and returns a boolean response
 const isURLOwnedByUser = function(url, userId, urlDatabase) {
   return urlDatabase[url].userId === userId;
 };
 
-module.exports = {getUserByEmail, generateRandomString, urlsForUser, emailExists, isURLOwnedByUser};
+// Return the user object based on the user ID
+const getUserById = function (id, users) {
+  return users[id];
+};
+
+module.exports = {getUserByEmail, generateRandomString, urlsForUser, emailExists, isURLOwnedByUser, getUserById};

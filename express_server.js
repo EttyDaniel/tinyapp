@@ -1,20 +1,26 @@
+// Include these packages
 const express = require("express");
-const app = express();
-const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 const { query } = require("express");
-app.use(bodyParser.urlencoded({extended: true}));
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
-const {getUserByEmail, generateRandomString, urlsForUser, emailExists, isURLOwnedByUser} = require("./helpers");
 
-//This tells the Express app to use EJS as its templating engine
-app.set("view engine", "ejs");
+// Global variables
+const app = express();
+const PORT = 8080; // default port 8080
 
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
   name: 'session',
   keys: ['key1', 'key2']
 }));
+
+//This tells the Express app to use EJS as its templating engine
+app.set("view engine", "ejs");
+
+// Import functions
+const {getUserByEmail, generateRandomString, urlsForUser, emailExists, isURLOwnedByUser, getUserById} = require("./helpers");
+
 
 /*----------------------------------------------------------
         GLOBAL Application Data
@@ -34,15 +40,16 @@ let users = {
   "aa1" : {
     id: "aa1",
     email: "yaya@gmail.com",
-    password: "$2b$10$2uJXf7z0pdTLedx1Dudv4ump/ctwspwqiUmeNKDV/O9IDKzHs2sMm" //Kal888
+    password: "$2b$10$2uJXf7z0pdTLedx1Dudv4ump/ctwspwqiUmeNKDV/O9IDKzHs2sMm" //Unhashed value: Kal888
   },
   "aa2" : {
     id: "aa2",
     email: "lilcat@yahoo.com",
-    password: "$2b$10$0lU03rBdZiRUfhVbx35Bs.g9W9P2qSrd6wQGJrMP2t.02n/6M42o2" //cat@cat
+    password: "$2b$10$0lU03rBdZiRUfhVbx35Bs.g9W9P2qSrd6wQGJrMP2t.02n/6M42o2" //Unhashed value: cat@cat
   }
 };
 //----------------------------------------------------------
+
 //Homepage
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -59,38 +66,33 @@ app.get("/hello", (req, res) => {
 
 //a new registration
 app.get("/register", (req,res) => {
-  const userId = req.session.user_id;
-  const user = users[userId];
+  const user = getUserById(req.session.user_id, users);
   templateVars = {user};
   res.render("register", templateVars);
 });
 
 //a new login
 app.get("/login", (req,res) => {
-  const userId = req.session.user_id;
-  const user = users[userId];
+  const user = getUserById(req.session.user_id, users);
   templateVars = {user};
   res.render("login", templateVars);
 });
 
 //pass the URL data to our template.
 app.get("/urls", (req, res) => {
-  const userId = req.session.user_id;
-  const user = users[userId];
+  const user = getUserById(req.session.user_id, users);
   let urls = {};
   if (user) {
-    urls = urlsForUser(userId, urlDatabase);
+    urls = urlsForUser(req.session.user_id, urlDatabase);
     templateVars = {urls, user};
     res.render("urls_index", templateVars);
   } else {
     res.status(402);
     res.render("loginRegister", {urls, user});
-    //res.status(402).send("Please Login or Register first");
   }
 });
 
 app.get("/urls/new", (req, res) => {
-  
   const userId = req.session.user_id;
   if (userId) {
     const user = users[userId];
@@ -99,10 +101,9 @@ app.get("/urls/new", (req, res) => {
   } else {
     res.redirect("/login");
   }
-
-  
 });
 
+// A route to update URLs
 app.post("/urls/:id/update", (req, res) => {
   if (isURLOwnedByUser(req.params.id, req.session.user_id, urlDatabase)) {
     urlDatabase[req.params.id].longURL = req.body.updatedLongURL;
@@ -112,6 +113,7 @@ app.post("/urls/:id/update", (req, res) => {
   }
 });
 
+// A route to delete URLs
 app.post("/urls/:shortURL/delete", (req, res) => {
   if (isURLOwnedByUser(req.params.shortURL, req.session.user_id, urlDatabase)) {
     const shortURL = req.params.shortURL;
@@ -155,7 +157,6 @@ app.post("/urls", (req, res) => {
  and sets an appropriate user_id cookie on successful login
 */
 app.post("/login", (req,res) => {
-  
   const emailFromUser = req.body.email;
   const currentUser = getUserByEmail(emailFromUser, users);
   //User dosen't exists in our users DB
